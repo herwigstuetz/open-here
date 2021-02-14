@@ -20,4 +20,14 @@ pub enum Command {
     /// Start open-here server
     #[structopt(name = "server")]
     Server,
+
+    /// Open target
+    #[structopt(name = "open")]
+    Open(OpenTarget),
+}
+
+#[derive(StructOpt, Debug)]
+/// Commands to be executed
+pub struct OpenTarget {
+    pub target: String,
 }

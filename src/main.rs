@@ -1,4 +1,5 @@
-mod cli;
+use open_here::cli;
+use open_here::cmd;
 
 use env_logger::Env;
 use structopt::StructOpt;
@@ -27,4 +28,14 @@ fn main() {
     setup_logger(args.verbosity);
 
     tracing::debug!("{:?}", args);
+
+    match args.command {
+        cli::Command::Server => {
+            tracing::error!("server unimplemented");
+        },
+        cli::Command::Open(open) => {
+            tracing::debug!("{:?}", open);
+            let _res = cmd::get_system_runner().run(open);
+        }
+    }
 }
