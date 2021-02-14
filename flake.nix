@@ -38,8 +38,8 @@
           inherit system;
           config = { };
           overlays = [
-            (import "${mozilla}/rust-overlay.nix")
-            rustOverlay
+#            (import "${mozilla}/rust-overlay.nix")
+#            rustOverlay
             naersk.overlay
           ];
         };
@@ -51,7 +51,9 @@
           buildInputs = with pkgs; [
             # For carog, clippy, rustfmt, etc.
             # rust-src is needed by rust-analyzer
-            (rustChannel.rust.override { extensions = [ "rust-src" ]; })
+#            (rustChannel.rust.override { extensions = [ "rust-src" ]; })
+            rust-analyzer
+            cargo rustc rustfmt clippy
 
             cargo-edit
           ];
