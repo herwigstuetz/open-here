@@ -1,5 +1,6 @@
 use open_here::cli;
 use open_here::cmd;
+use open_here::server;
 
 use env_logger::Env;
 use structopt::StructOpt;
@@ -31,7 +32,12 @@ fn main() {
 
     match args.command {
         cli::Command::Server => {
-            tracing::error!("server unimplemented");
+            tracing::debug!("serving");
+            let res = server::serve();
+
+            if let Err(e) = res {
+                tracing::error!("{}", e);
+            }
         },
         cli::Command::Open(open) => {
             tracing::debug!("{:?}", open);

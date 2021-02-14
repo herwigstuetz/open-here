@@ -26,7 +26,7 @@ pub enum Command {
     Open(OpenTarget),
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, serde::Deserialize)]
 /// Commands to be executed
 pub struct OpenTarget {
     pub target: String,

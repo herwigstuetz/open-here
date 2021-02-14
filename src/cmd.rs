@@ -26,15 +26,11 @@ impl Runner for XdgOpen {
         let mut cmd = Command::new("xdg-open");
         cmd.arg(open.target);
 
-        let output = cmd.output().map_err(|e| Error::CouldNotRun(e.to_string()))?;
+        let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
         tracing::debug!("xdg-open output: {:?}", output);
 
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(Error::Exit(output.status))
-        }
+        Ok(())
     }
 }
 
