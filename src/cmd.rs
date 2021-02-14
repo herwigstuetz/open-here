@@ -13,18 +13,18 @@ type Result<T> = std::result::Result<T, Error>;
 
 
 pub trait Runner {
-    fn run(&self, open: cli::OpenTarget) -> Result<()>;
+    fn run(&self, open: &cli::OpenTarget) -> Result<()>;
 }
 
 
 pub struct XdgOpen {
 }
 impl Runner for XdgOpen {
-    fn run(&self, open: cli::OpenTarget) -> Result<()> {
-        tracing::info!("xdg-open {}", open.target);
+    fn run(&self, open: &cli::OpenTarget) -> Result<()> {
+        tracing::info!("xdg-open {}", &open.target);
 
         let mut cmd = Command::new("xdg-open");
-        cmd.arg(open.target);
+        cmd.arg(&open.target);
 
         let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
 

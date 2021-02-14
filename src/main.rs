@@ -1,6 +1,6 @@
 use open_here::cli;
-use open_here::cmd;
 use open_here::server;
+use open_here::client;
 
 use env_logger::Env;
 use structopt::StructOpt;
@@ -39,9 +39,9 @@ fn main() {
                 tracing::error!("{}", e);
             }
         },
-        cli::Command::Open(open) => {
-            tracing::debug!("{:?}", open);
-            let _res = cmd::get_system_runner().run(open);
+        cli::Command::Open(target) => {
+            tracing::debug!("{:?}", target);
+            client::open(target);
         }
     }
 }

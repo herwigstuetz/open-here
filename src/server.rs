@@ -11,7 +11,7 @@ fn open(form: web::Query<cli::OpenTarget>) -> HttpResponse {
 
     let open = cli::OpenTarget { target: form.target.to_string(), };
 
-    let _res = cmd::get_system_runner().run(open);
+    let _res = cmd::get_system_runner().run(&open);
     tracing::debug!("{:?}", _res);
 
     HttpResponse::Ok().finish()
