@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
+tracing = { version = "0.1.23", features = [ "log" ] }
+env_logger = "0.8.3"
