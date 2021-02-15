@@ -23,7 +23,7 @@ pub fn serve() -> std::io::Result<()> {
             HttpServer::new(|| {
                 App::new().route("/open", web::get().to(open))
             })
-                .bind("127.0.0.1:8010")?
+                .bind("0.0.0.0:8010")?
                 .run()
                 .await
         }
