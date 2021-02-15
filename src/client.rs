@@ -12,11 +12,8 @@ use envconfig::Envconfig;
 
 #[derive(Envconfig)]
 struct Config {
-    #[envconfig(from = "OH_HOST")]
-    pub oh_host: String,
-
-    #[envconfig(from = "OH_PORT")]
-    pub oh_port: Option<u16>,
+    #[envconfig(from = "OPEN_HOST", default = "127.0.0.1:9123")]
+    pub host: String,
 }
 
 
@@ -47,8 +44,8 @@ impl OpenClient {
 
 #[tokio::main]
 pub async fn open(open: cli::OpenTarget) {
-    let cfg = Config::init().unwrap();
-    let server = format!("http://{}:{}", cfg.oh_host, cfg.oh_port.unwrap_or(8080));
+    let cfg = Config::init_from_env().unwrap();
+    let server = format!("http://{}", cfg.host);
 
     let client = OpenClient::new(server);
 
