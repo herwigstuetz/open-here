@@ -57,8 +57,8 @@ impl Runner for WindowsOpen {
     fn run(&self, open: &cli::OpenTarget) -> Result<()> {
         tracing::info!("start {}", &open.target);
 
-        let mut cmd = Command::new("start");
-        cmd.arg(&open.target);
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/c", "start", &open.target]);
 
         let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
