@@ -4,7 +4,6 @@ use crate::cli;
 use crate::cmd;
 
 use envconfig::Envconfig;
-use std::env;
 
 #[derive(Envconfig)]
 struct Config {

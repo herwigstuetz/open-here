@@ -1,13 +1,9 @@
 //! open-here client
 
 use crate::cli;
-use crate::cmd;
-
-use reqwest::Client;
-use tokio::*;
 
 use envconfig::Envconfig;
-use std::env;
+use reqwest::Client;
 
 #[derive(Envconfig)]
 struct Config {
