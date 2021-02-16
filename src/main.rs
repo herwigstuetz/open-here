@@ -1,10 +1,9 @@
 use open_here::cli;
-use open_here::server;
 use open_here::client;
+use open_here::server;
 
 use env_logger::Env;
 use structopt::StructOpt;
-
 
 fn clamp(x: usize, min: usize, max: usize) -> usize {
     if x < min {
@@ -38,7 +37,7 @@ fn main() {
             if let Err(e) = res {
                 tracing::error!("{}", e);
             }
-        },
+        }
         cli::Command::Open(target) => {
             tracing::debug!("{:?}", target);
             client::open(target);

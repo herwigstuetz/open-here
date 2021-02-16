@@ -11,14 +11,11 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-
 pub trait Runner {
     fn run(&self, open: &cli::OpenTarget) -> Result<()>;
 }
 
-
-pub struct LinuxOpen {
-}
+pub struct LinuxOpen {}
 impl Runner for LinuxOpen {
     fn run(&self, open: &cli::OpenTarget) -> Result<()> {
         tracing::info!("xdg-open {}", &open.target);
@@ -34,8 +31,7 @@ impl Runner for LinuxOpen {
     }
 }
 
-pub struct MacOSOpen {
-}
+pub struct MacOSOpen {}
 impl Runner for MacOSOpen {
     fn run(&self, open: &cli::OpenTarget) -> Result<()> {
         tracing::info!("open {}", &open.target);
@@ -51,8 +47,7 @@ impl Runner for MacOSOpen {
     }
 }
 
-pub struct WindowsOpen {
-}
+pub struct WindowsOpen {}
 impl Runner for WindowsOpen {
     fn run(&self, open: &cli::OpenTarget) -> Result<()> {
         tracing::info!("start {}", &open.target);

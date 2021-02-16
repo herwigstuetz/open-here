@@ -6,16 +6,14 @@ use crate::cmd;
 use reqwest::Client;
 use tokio::*;
 
-
-use std::env;
 use envconfig::Envconfig;
+use std::env;
 
 #[derive(Envconfig)]
 struct Config {
     #[envconfig(from = "OPEN_HOST", default = "127.0.0.1:9123")]
     pub host: String,
 }
-
 
 struct OpenClient {
     client: Client,
@@ -32,7 +30,10 @@ impl OpenClient {
 
     async fn open(&self, target: cli::OpenTarget) -> Result<reqwest::Response, reqwest::Error> {
         let url = format!("{}/open", &self.server);
-        let req = self.client.get(&url).query(&[("target", &target.target.to_string())]);
+        let req = self
+            .client
+            .get(&url)
+            .query(&[("target", &target.target.to_string())]);
 
         tracing::debug!("Sent request: {:?}", &req);
         let r = req.send().await?;
@@ -40,7 +41,6 @@ impl OpenClient {
         Ok(r)
     }
 }
-
 
 #[tokio::main]
 pub async fn open(open: cli::OpenTarget) {
@@ -50,7 +50,7 @@ pub async fn open(open: cli::OpenTarget) {
     let client = OpenClient::new(server);
 
     match client.open(open).await {
-        Ok(_) => {},
-        Err(_) => {},
+        Ok(_) => {}
+        Err(_) => {}
     }
 }
