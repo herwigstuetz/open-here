@@ -40,7 +40,11 @@ fn main() {
         }
         cli::Command::Open(target) => {
             tracing::debug!("{:?}", target);
-            client::open(target);
+            let res = client::open(target);
+
+            if let Err(e) = res {
+                tracing::error!("{}", e);
+            }
         }
     }
 }

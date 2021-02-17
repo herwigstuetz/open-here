@@ -4,6 +4,7 @@ use crate::cli;
 
 use envconfig::Envconfig;
 use reqwest::Client;
+use std::fmt;
 
 /// Configuration from the environment for the open-here client
 #[derive(Envconfig)]
@@ -14,9 +15,18 @@ struct Config {
 }
 
 /// An error that can occur during opening targets
+#[derive(Debug)]
 pub enum OpenError {
     /// A HTTP error during sending the HTTP request
     HttpError { msg: String },
+}
+
+impl fmt::Display for OpenError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OpenError::HttpError { msg } => write!(f, "Open failed with {}", msg),
+        }
+    }
 }
 
 impl From<reqwest::Error> for OpenError {
@@ -72,14 +82,18 @@ impl OpenClient {
 }
 
 #[tokio::main]
-pub async fn open(open: cli::OpenTarget) {
+pub async fn open(open: cli::OpenTarget) -> Result<()> {
     let cfg = Config::init_from_env().unwrap();
     let server = format!("http://{}", cfg.host);
 
     let client = OpenClient::new(server);
+    /*
+        match client.open(open).await {
+            Ok(_) => {}
+            Err(_) => {}
+        }
+    */
+    client.open(open).await?;
 
-    match client.open(open).await {
-        Ok(_) => {}
-        Err(_) => {}
-    }
+    Ok(())
 }
