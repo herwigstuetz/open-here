@@ -1,15 +1,28 @@
 //! Command to run.
 use crate::cli;
 
+use std::error::Error;
+use std::fmt;
 use std::process::{Command, ExitStatus};
 
 #[derive(Debug)]
-pub enum Error {
+pub enum OpenError {
     Exit(ExitStatus),
     CouldNotRun(String),
 }
 
-type Result<T> = std::result::Result<T, Error>;
+impl fmt::Display for OpenError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OpenError::Exit(status) => write!(f, "Process exited with {}", status),
+            OpenError::CouldNotRun(msg) => write!(f, "Could not run: {}", msg),
+        }
+    }
+}
+
+impl Error for OpenError {}
+
+type Result<T> = std::result::Result<T, OpenError>;
 
 pub trait Runner {
     fn run(&self, open: &cli::OpenTarget) -> Result<()>;
@@ -19,11 +32,12 @@ pub struct LinuxOpen {}
 impl Runner for LinuxOpen {
     fn run(&self, open: &cli::OpenTarget) -> Result<()> {
         tracing::info!("xdg-open {}", &open.target);
-
         let mut cmd = Command::new("xdg-open");
         cmd.arg(&open.target);
 
-        let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
+        let output = cmd
+            .spawn()
+            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
 
         tracing::debug!("xdg-open output: {:?}", output);
 
@@ -39,7 +53,9 @@ impl Runner for MacOSOpen {
         let mut cmd = Command::new("open");
         cmd.arg(&open.target);
 
-        let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
+        let output = cmd
+            .spawn()
+            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
 
         tracing::debug!("open output: {:?}", output);
 
@@ -55,7 +71,9 @@ impl Runner for WindowsOpen {
         let mut cmd = Command::new("cmd");
         cmd.args(&["/c", "start", &open.target]);
 
-        let output = cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
+        let output = cmd
+            .spawn()
+            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
 
         tracing::debug!("start output: {:?}", output);
 
