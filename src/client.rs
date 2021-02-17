@@ -21,7 +21,9 @@ pub enum OpenError {
 
 impl From<reqwest::Error> for OpenError {
     fn from(request: reqwest::Error) -> Self {
-        OpenError::HttpError { msg: request.to_string() }
+        OpenError::HttpError {
+            msg: request.to_string(),
+        }
     }
 }
 
@@ -62,7 +64,7 @@ impl OpenClient {
 
         if !status.is_success() {
             tracing::error!("{}", text);
-            return Err(OpenError::HttpError { msg: text } )
+            return Err(OpenError::HttpError { msg: text });
         }
 
         Ok(())
