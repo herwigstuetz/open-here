@@ -87,12 +87,6 @@ pub async fn open(open: cli::OpenTarget) -> Result<()> {
     let server = format!("http://{}", cfg.host);
 
     let client = OpenClient::new(server);
-    /*
-        match client.open(open).await {
-            Ok(_) => {}
-            Err(_) => {}
-        }
-    */
     client.open(open).await?;
 
     Ok(())
