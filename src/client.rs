@@ -1,6 +1,7 @@
 //! open-here client
 
 use crate::cli;
+use crate::cmd;
 
 use envconfig::Envconfig;
 use reqwest::Client;
@@ -19,12 +20,14 @@ struct Config {
 pub enum OpenError {
     /// A HTTP error during sending the HTTP request
     HttpError { msg: String },
+    ServerError { err: cmd::OpenError },
 }
 
 impl fmt::Display for OpenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OpenError::HttpError { msg } => write!(f, "Open failed with {}", msg),
+            OpenError::HttpError { msg } => write!(f, "Open failed with HTTP error: {}", msg),
+            OpenError::ServerError { err } => write!(f, "Open failed with server error: {}", err),
         }
     }
 }
@@ -69,15 +72,14 @@ impl OpenClient {
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;
 
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or("".to_string());
-
-        if !status.is_success() {
-            tracing::error!("{}", text);
-            return Err(OpenError::HttpError { msg: text });
+        let res: Option<cmd::OpenError> = resp.json().await?;
+        match res {
+            None => Ok(()),
+            Some(err) => {
+                tracing::trace!("{}", err);
+                Err(OpenError::ServerError { err })
+            }
         }
-
-        Ok(())
     }
 }
 

@@ -3,18 +3,16 @@ use crate::cli;
 
 use std::error::Error;
 use std::fmt;
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum OpenError {
-    Exit(ExitStatus),
     CouldNotRun(String),
 }
 
 impl fmt::Display for OpenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OpenError::Exit(status) => write!(f, "Process exited with {}", status),
             OpenError::CouldNotRun(msg) => write!(f, "Could not run: {}", msg),
         }
     }

@@ -23,14 +23,14 @@ fn open(form: web::Query<cli::OpenTarget>) -> HttpResponse {
         target: form.target.to_string(),
     };
 
-    let res = cmd::get_system_runner().run(&open);
-    if let Err(err) = res {
+    let res = if let Err(err) = cmd::get_system_runner().run(&open) {
         tracing::warn!("{}", err);
-        HttpResponse::Ok().body(format!("{}", err))
+        Some(err)
     } else {
-        tracing::debug!("{:?}", res);
-        HttpResponse::Ok().finish()
-    }
+        None
+    };
+
+    HttpResponse::Ok().json(res)
 }
 
 /// Start open-here server
