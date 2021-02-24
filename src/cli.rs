@@ -1,5 +1,7 @@
 //! CLI for open-here.
 
+use crate::server;
+
 pub use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -19,14 +21,14 @@ pub struct Args {
 pub enum Command {
     /// Start open-here server
     #[structopt(name = "server")]
-    Server,
+    Server(server::Config),
 
     /// Open target
     #[structopt(name = "open")]
     Open(OpenTarget),
 }
 
-#[derive(StructOpt, Debug, serde::Deserialize)]
+#[derive(StructOpt, Debug, serde::Serialize, serde::Deserialize)]
 /// Commands to be executed
 pub struct OpenTarget {
     pub target: String,

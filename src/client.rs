@@ -2,16 +2,20 @@
 
 use crate::cli;
 use crate::cmd;
+use crate::server;
+
+use std::fmt;
 
 use envconfig::Envconfig;
 use reqwest::Client;
-use std::fmt;
+use structopt::StructOpt;
 
 /// Configuration from the environment for the open-here client
-#[derive(Envconfig)]
-struct Config {
+#[derive(Debug, StructOpt, Envconfig)]
+pub struct Config {
     /// Host and optional port on which open-here server is listening on
     #[envconfig(from = "OPEN_HOST", default = "127.0.0.1:9123")]
+    #[structopt(default_value = "127.0.0.1:9123")]
     pub host: String,
 }
 
@@ -19,8 +23,12 @@ struct Config {
 #[derive(Debug)]
 pub enum OpenError {
     /// A HTTP error during sending the HTTP request
-    HttpError { msg: String },
-    ServerError { err: cmd::OpenError },
+    HttpError {
+        msg: String,
+    },
+    ServerError {
+        err: cmd::OpenError,
+    },
 }
 
 impl fmt::Display for OpenError {
@@ -43,7 +51,7 @@ impl From<reqwest::Error> for OpenError {
 type Result<T> = std::result::Result<T, OpenError>;
 
 /// Client that connects to open-here server and sends "open" requests
-struct OpenClient {
+pub struct OpenClient {
     /// HTTP client
     client: Client,
 
@@ -54,7 +62,7 @@ struct OpenClient {
 impl OpenClient {
     /// Instantiate a new `OpenClient`. It keeps an internal HTTP Client
     /// for connection pooling
-    fn new(server: String) -> Self {
+    pub fn new(server: String) -> Self {
         Self {
             client: Client::new(),
             server,
@@ -62,7 +70,8 @@ impl OpenClient {
     }
 
     /// Send a request to open `target` on the open-here server
-    async fn open(&self, target: cli::OpenTarget) -> Result<()> {
+    #[tokio::main]
+    pub async fn open(&self, target: &cli::OpenTarget) -> Result<String> {
         let url = format!("{}/open", &self.server);
         let req = self
             .client
@@ -72,24 +81,12 @@ impl OpenClient {
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;
 
-        let res: Option<cmd::OpenError> = resp.json().await?;
-        match res {
-            None => Ok(()),
-            Some(err) => {
-                tracing::trace!("{}", err);
-                Err(OpenError::ServerError { err })
-            }
+        let res: server::Response = resp.json().await?;
+
+        if let Err(err) = &res {
+            tracing::trace!("{}", err);
         }
+
+        res.map_err(|err| OpenError::ServerError { err })
     }
-}
-
-#[tokio::main]
-pub async fn open(open: cli::OpenTarget) -> Result<()> {
-    let cfg = Config::init_from_env().unwrap();
-    let server = format!("http://{}", cfg.host);
-
-    let client = OpenClient::new(server);
-    client.open(open).await?;
-
-    Ok(())
 }

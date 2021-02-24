@@ -22,60 +22,88 @@ impl Error for OpenError {}
 
 type Result<T> = std::result::Result<T, OpenError>;
 
+pub struct OpenCommand {
+    program: String,
+    /// TODO: use Vec<&str>
+    args: std::vec::Vec<String>,
+}
+
+impl fmt::Display for OpenCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {}",
+            self.program,
+            self.args
+                .iter()
+                .map(|arg| format!("{}", arg))
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
+}
+
+impl Into<Command> for OpenCommand {
+    fn into(self) -> Command {
+        let mut cmd = Command::new(self.program);
+        cmd.args(self.args);
+
+        cmd
+    }
+}
+
 pub trait Runner {
-    fn run(&self, open: &cli::OpenTarget) -> Result<()>;
+    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand>;
+
+    fn run(&self, open: &cli::OpenTarget) -> Result<String> {
+        let mut cmd: Command = self.cmd(open)?.into();
+
+        cmd.spawn()
+            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+
+        Ok("".to_string())
+    }
+
+    fn dry_run(&self, open: &cli::OpenTarget) -> Result<String> {
+        let cmd = self.cmd(open)?;
+
+        let res = format!("Would run: {}", cmd);
+        tracing::info!("{}", &res);
+
+        Ok(res)
+    }
 }
 
 pub struct LinuxOpen {}
 impl Runner for LinuxOpen {
-    fn run(&self, open: &cli::OpenTarget) -> Result<()> {
-        tracing::info!("xdg-open {}", &open.target);
-        let mut cmd = Command::new("xdg-open");
-        cmd.arg(&open.target);
-
-        let output = cmd
-            .spawn()
-            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
-
-        tracing::debug!("xdg-open output: {:?}", output);
-
-        Ok(())
+    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+        Ok(OpenCommand {
+            program: String::from("xdg-open"),
+            args: vec![open.target.to_string()],
+        })
     }
 }
 
 pub struct MacOSOpen {}
 impl Runner for MacOSOpen {
-    fn run(&self, open: &cli::OpenTarget) -> Result<()> {
-        tracing::info!("open {}", &open.target);
-
-        let mut cmd = Command::new("open");
-        cmd.arg(&open.target);
-
-        let output = cmd
-            .spawn()
-            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
-
-        tracing::debug!("open output: {:?}", output);
-
-        Ok(())
+    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+        Ok(OpenCommand {
+            program: String::from("open"),
+            args: vec![open.target.to_string()],
+        })
     }
 }
 
 pub struct WindowsOpen {}
 impl Runner for WindowsOpen {
-    fn run(&self, open: &cli::OpenTarget) -> Result<()> {
-        tracing::info!("start {}", &open.target);
-
-        let mut cmd = Command::new("cmd");
-        cmd.args(&["/c", "start", &open.target]);
-
-        let output = cmd
-            .spawn()
-            .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
-
-        tracing::debug!("start output: {:?}", output);
-
-        Ok(())
+    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+        Ok(OpenCommand {
+            program: String::from("cmd"),
+            args: vec!["/c", "start", &open.target]
+                .iter()
+                .map(|arg| arg.to_string())
+                .collect(),
+        })
     }
 }
 
