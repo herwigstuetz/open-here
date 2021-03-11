@@ -2,7 +2,6 @@
 
 use open_here::cli;
 use open_here::client;
-use open_here::open;
 use open_here::server;
 use open_here::setup_logger;
 
@@ -11,6 +10,8 @@ use std::thread;
 #[test]
 fn server_test() {
     setup_logger(4);
+
+    let target = "http://localhost:1234".to_string();
 
     let server = server::Server::new(server::Config {
         host: "localhost:0".to_string(),
@@ -22,18 +23,11 @@ fn server_test() {
 
     let _server_thread = thread::spawn(|| server.run());
 
-    let target = "http://localhost:1234".to_string();
+    let res = client::OpenClient::new(format!("http://localhost:{}", port))
+        .open(&cli::OpenTarget {
+            target: target.clone(),
+        })
+        .unwrap();
 
-    let res = open(
-            client::Config {
-                host: format!("localhost:{}", port)
-            },
-            cli::OpenTarget {
-                target: target.clone()
-            }
-        ).unwrap();
-
-    assert!(
-        res.contains("Would run:") && res.contains(&target)
-    );
+    assert!(res.contains("Would run:") && res.contains(&target));
 }
