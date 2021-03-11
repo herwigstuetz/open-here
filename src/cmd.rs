@@ -61,6 +61,8 @@ pub trait Runner {
     fn cmd(&self, open: &str) -> Result<OpenCommand>;
 
     fn run(&self, open: &OpenTarget) -> Result<String> {
+        let span = tracing::debug_span!("run", open = %format!("{:?}", open));
+        let _guard = span.enter();
 
         match open {
             OpenTarget::Url { target } => {
@@ -73,11 +75,16 @@ pub trait Runner {
             },
 
             OpenTarget::Path { filename, content } => {
+                let span = tracing::debug_span!("run path");
+                let _guard = span.enter();
+
                 let dir = std::env::temp_dir().join("open-here");
 
                 let file_path = dir.join(filename);
 
                 let mut file = File::create(&file_path).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+
+                tracing::debug!("file: {}", &file_path.as_path().display());
 
                 file.write_all(content).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
 
@@ -94,6 +101,9 @@ pub trait Runner {
     }
 
     fn dry_run(&self, open: &OpenTarget) -> Result<String> {
+        let span = tracing::debug_span!("run", open = %format!("{:?}", open));
+        let _guard = span.enter();
+
         match open {
             OpenTarget::Url { target } => {
                 let cmd = self.cmd(&target)?;
