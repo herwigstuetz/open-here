@@ -1,8 +1,7 @@
 //! open-here client
 
-use crate::cli;
 use crate::cmd;
-use crate::server;
+use crate::{OpenTarget, Response};
 
 use std::fmt;
 
@@ -71,7 +70,7 @@ impl OpenClient {
 
     /// Send a request to open `target` on the open-here server
     #[tokio::main]
-    pub async fn open(&self, target: &cli::OpenTarget) -> Result<String> {
+    pub async fn open(&self, target: &OpenTarget) -> Result<String> {
         let url = format!("{}/open", &self.server);
         let req = self
             .client
@@ -81,7 +80,7 @@ impl OpenClient {
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;
 
-        let res: server::Response = resp.json().await?;
+        let res: Response = resp.json().await?;
 
         if let Err(err) = &res {
             tracing::trace!("{}", err);

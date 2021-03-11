@@ -2,6 +2,7 @@ use open_here::cli;
 use open_here::client;
 use open_here::server;
 use open_here::setup_logger;
+use open_here::OpenTarget;
 
 use envconfig::Envconfig;
 use structopt::StructOpt;
@@ -19,7 +20,7 @@ pub fn serve(config: server::Config) -> Result<(), String> {
     }
 }
 
-pub fn open(config: client::Config, target: cli::OpenTarget) -> Result<String, String> {
+pub fn open(config: client::Config, target: OpenTarget) -> Result<String, String> {
     let client = client::OpenClient::new(format!("http://{}", config.host));
 
     client.open(&target).map_err(|e| e.to_string())
@@ -34,10 +35,11 @@ pub fn run(args: cli::Args) -> Result<(), String> {
 
             serve(config)
         }
-        cli::Command::Open(target) => {
+        cli::Command::Open {target } => {
             tracing::debug!("{:?}", target);
 
             let config = client::Config::init_from_env().unwrap();
+            let target = OpenTarget::parse(&target).ok_or_else(|| "".to_string())?;
 
             open(config, target).map(|_| ())
         }

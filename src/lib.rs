@@ -4,6 +4,24 @@ pub mod cmd;
 pub mod server;
 
 use env_logger::Env;
+pub use structopt::StructOpt;
+
+#[derive(StructOpt, Debug, serde::Serialize, serde::Deserialize)]
+/// Commands to be executed
+pub struct OpenTarget {
+    pub target: String,
+}
+
+impl OpenTarget {
+    pub fn parse(s: &str) -> Option<OpenTarget> {
+        Some(
+            OpenTarget { target: s.to_string() }
+        )
+    }
+}
+
+pub type Response = Result<String, cmd::OpenError>;
+
 
 fn clamp(x: usize, min: usize, max: usize) -> usize {
     if x < min {

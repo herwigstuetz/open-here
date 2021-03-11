@@ -1,13 +1,11 @@
 //! The server handling open requests.
 
-use crate::cli;
 use crate::cmd;
+use crate::{OpenTarget, Response};
 
 use actix_web::{web, App, HttpResponse, HttpServer};
 use std::net::TcpListener;
 use structopt::StructOpt;
-
-pub type Response = Result<String, cmd::OpenError>;
 
 /// Configuration from the environment for the open-here server
 #[derive(Debug, Clone, StructOpt)]
@@ -22,12 +20,12 @@ pub struct Config {
 }
 
 /// Handle GET /open by opening the target with the system runner
-fn open(cfg: web::Data<Config>, form: web::Query<cli::OpenTarget>) -> HttpResponse {
+fn open(cfg: web::Data<Config>, form: web::Query<OpenTarget>) -> HttpResponse {
     // TODO: More consistent logging/tracing/spanning
     let span = tracing::debug_span!("open", target = %format!("{:?}", form.target));
     let _guard = span.enter();
 
-    let open = cli::OpenTarget {
+    let open = OpenTarget {
         target: form.target.to_string(),
     };
 

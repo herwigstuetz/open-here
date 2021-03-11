@@ -1,5 +1,5 @@
 //! Command to run.
-use crate::cli;
+use crate::OpenTarget;
 
 use std::error::Error;
 use std::fmt;
@@ -36,7 +36,7 @@ impl fmt::Display for OpenCommand {
             self.program,
             self.args
                 .iter()
-                .map(|arg| format!("{}", arg))
+                .map(|arg| arg.to_string())
                 .collect::<Vec<String>>()
                 .join(" ")
         )
@@ -53,9 +53,9 @@ impl Into<Command> for OpenCommand {
 }
 
 pub trait Runner {
-    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand>;
+    fn cmd(&self, open: &OpenTarget) -> Result<OpenCommand>;
 
-    fn run(&self, open: &cli::OpenTarget) -> Result<String> {
+    fn run(&self, open: &OpenTarget) -> Result<String> {
         let mut cmd: Command = self.cmd(open)?.into();
 
         cmd.spawn()
@@ -64,7 +64,7 @@ pub trait Runner {
         Ok("".to_string())
     }
 
-    fn dry_run(&self, open: &cli::OpenTarget) -> Result<String> {
+    fn dry_run(&self, open: &OpenTarget) -> Result<String> {
         let cmd = self.cmd(open)?;
 
         let res = format!("Would run: {}", cmd);
@@ -76,7 +76,7 @@ pub trait Runner {
 
 pub struct LinuxOpen {}
 impl Runner for LinuxOpen {
-    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+    fn cmd(&self, open: &OpenTarget) -> Result<OpenCommand> {
         Ok(OpenCommand {
             program: String::from("xdg-open"),
             args: vec![open.target.to_string()],
@@ -86,7 +86,7 @@ impl Runner for LinuxOpen {
 
 pub struct MacOSOpen {}
 impl Runner for MacOSOpen {
-    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+    fn cmd(&self, open: &OpenTarget) -> Result<OpenCommand> {
         Ok(OpenCommand {
             program: String::from("open"),
             args: vec![open.target.to_string()],
@@ -96,7 +96,7 @@ impl Runner for MacOSOpen {
 
 pub struct WindowsOpen {}
 impl Runner for WindowsOpen {
-    fn cmd(&self, open: &cli::OpenTarget) -> Result<OpenCommand> {
+    fn cmd(&self, open: &OpenTarget) -> Result<OpenCommand> {
         Ok(OpenCommand {
             program: String::from("cmd"),
             args: vec!["/c", "start", &open.target]

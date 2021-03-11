@@ -1,6 +1,6 @@
 //! tests/open_check.rs
 
-use open_here::cli;
+use open_here::OpenTarget;
 use open_here::client;
 use open_here::server;
 use open_here::setup_logger;
@@ -24,7 +24,7 @@ fn server_test() {
     let _server_thread = thread::spawn(|| server.run());
 
     let res = client::OpenClient::new(format!("http://localhost:{}", port))
-        .open(&cli::OpenTarget {
+        .open(&OpenTarget {
             target: target.clone(),
         })
         .unwrap();
