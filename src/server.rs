@@ -20,14 +20,12 @@ pub struct Config {
 }
 
 /// Handle GET /open by opening the target with the system runner
-fn open(cfg: web::Data<Config>, form: web::Query<OpenTarget>) -> HttpResponse {
+fn open(cfg: web::Data<Config>, form: web::Json<OpenTarget>) -> HttpResponse {
     // TODO: More consistent logging/tracing/spanning
-    let span = tracing::debug_span!("open", target = %format!("{:?}", form.target));
+    let span = tracing::debug_span!("open", target = %format!("{:?}", form.0.to_string()));
     let _guard = span.enter();
 
-    let open = OpenTarget {
-        target: form.target.to_string(),
-    };
+    let open = form.0;
 
     let res: Response = if cfg.dry_run {
         cmd::get_system_runner().dry_run(&open)

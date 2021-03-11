@@ -75,7 +75,8 @@ impl OpenClient {
         let req = self
             .client
             .get(&url)
-            .query(&[("target", &target.target.to_string())]);
+            .json(&target);
+//            .query(&[("target", &target.to_string())]);
 
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;

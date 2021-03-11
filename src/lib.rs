@@ -6,17 +6,45 @@ pub mod server;
 use env_logger::Env;
 pub use structopt::StructOpt;
 
-#[derive(StructOpt, Debug, serde::Serialize, serde::Deserialize)]
+use std::fs;
+use std::path::Path;
+use std::vec::Vec;
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 /// Commands to be executed
-pub struct OpenTarget {
-    pub target: String,
+pub enum OpenTarget {
+    Url { target: String },
+    Path {
+        filename: String,
+        content: Vec<u8>,
+    },
 }
 
 impl OpenTarget {
-    pub fn parse(s: &str) -> Option<OpenTarget> {
-        Some(
-            OpenTarget { target: s.to_string() }
-        )
+    pub fn new(s: &str) -> Option<OpenTarget> {
+        if s.starts_with("http://") || s.starts_with("https://") {
+            Some(
+                OpenTarget::Url { target: s.to_string() }
+            )
+        } else if Path::new(s).exists() {
+            Some (
+                OpenTarget::Path {
+                    filename: s.to_string(),
+                    content: fs::read(s).ok()?,
+                }
+            )
+        } else {
+            None
+        }
+    }
+}
+
+impl std::fmt::Display for OpenTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenTarget::Url { target } => write!(f, "{}", target.clone()),
+            OpenTarget::Path { filename, .. } => write!(f, "{}", filename.clone()),
+        }
     }
 }
 

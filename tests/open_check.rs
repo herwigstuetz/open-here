@@ -24,7 +24,7 @@ fn server_test() {
     let _server_thread = thread::spawn(|| server.run());
 
     let res = client::OpenClient::new(format!("http://localhost:{}", port))
-        .open(&OpenTarget {
+        .open(&OpenTarget::Url {
             target: target.clone(),
         })
         .unwrap();
