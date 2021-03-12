@@ -14,25 +14,20 @@ use std::vec::Vec;
 /// Commands to be executed
 pub enum OpenTarget {
     Url { target: String },
-    Path {
-        filename: String,
-        content: Vec<u8>,
-    },
+    Path { filename: String, content: Vec<u8> },
 }
 
 impl OpenTarget {
     pub fn new(s: &str) -> Option<OpenTarget> {
         if s.starts_with("http://") || s.starts_with("https://") {
-            Some(
-                OpenTarget::Url { target: s.to_string() }
-            )
+            Some(OpenTarget::Url {
+                target: s.to_string(),
+            })
         } else if Path::new(s).exists() {
-            Some (
-                OpenTarget::Path {
-                    filename: s.to_string(),
-                    content: fs::read(s).ok()?,
-                }
-            )
+            Some(OpenTarget::Path {
+                filename: s.to_string(),
+                content: fs::read(s).ok()?,
+            })
         } else {
             None
         }
@@ -49,7 +44,6 @@ impl std::fmt::Display for OpenTarget {
 }
 
 pub type Response = Result<String, cmd::OpenError>;
-
 
 fn clamp(x: usize, min: usize, max: usize) -> usize {
     if x < min {

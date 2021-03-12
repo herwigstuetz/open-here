@@ -35,7 +35,7 @@ pub fn run(args: cli::Args) -> Result<(), String> {
 
             serve(config)
         }
-        cli::Command::Open {target } => {
+        cli::Command::Open { target } => {
             tracing::debug!("{:?}", target);
 
             let config = client::Config::init_from_env().unwrap();

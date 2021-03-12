@@ -25,5 +25,5 @@ pub enum Command {
 
     /// Open target
     #[structopt(name = "open")]
-    Open {target: String},
+    Open { target: String },
 }

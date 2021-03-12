@@ -72,11 +72,8 @@ impl OpenClient {
     #[tokio::main]
     pub async fn open(&self, target: &OpenTarget) -> Result<String> {
         let url = format!("{}/open", &self.server);
-        let req = self
-            .client
-            .get(&url)
-            .json(&target);
-//            .query(&[("target", &target.to_string())]);
+        let req = self.client.get(&url).json(&target);
+        //            .query(&[("target", &target.to_string())]);
 
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;

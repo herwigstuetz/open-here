@@ -1,24 +1,27 @@
 //! Command to run.
 use crate::OpenTarget;
 
-use std::fs::File;
-use std::io::Write;
 use std::error::Error;
 use std::fmt;
+use std::fs::File;
+use std::io::Write;
 use std::process::Command;
-
-use tempfile::tempdir;
-
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum OpenError {
     CouldNotRun(String),
+    CreateDirectory(String),
+    OpenFile(String),
+    WriteFile(String),
 }
 
 impl fmt::Display for OpenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OpenError::CouldNotRun(msg) => write!(f, "Could not run: {}", msg),
+            OpenError::CreateDirectory(msg) => write!(f, "Could not create directory: {}", msg),
+            OpenError::OpenFile(msg) => write!(f, "Could open file: {}", msg),
+            OpenError::WriteFile(msg) => write!(f, "Could write file: {}", msg),
         }
     }
 }
@@ -60,6 +63,10 @@ impl Into<Command> for OpenCommand {
 pub trait Runner {
     fn cmd(&self, open: &str) -> Result<OpenCommand>;
 
+    fn temp_dir(&self) -> std::path::PathBuf {
+        std::env::temp_dir().join("open-here")
+    }
+
     fn run(&self, open: &OpenTarget) -> Result<String> {
         let span = tracing::debug_span!("run", open = %format!("{:?}", open));
         let _guard = span.enter();
@@ -72,27 +79,23 @@ pub trait Runner {
                     .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
 
                 Ok(String::from(""))
-            },
+            }
 
             OpenTarget::Path { filename, content } => {
-                let span = tracing::debug_span!("run path");
-                let _guard = span.enter();
+                let dir = self.temp_dir();
 
-                let dir = std::env::temp_dir().join("open-here");
-
-                std::fs::create_dir_all(&dir).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+                std::fs::create_dir_all(&dir)
+                    .map_err(|e| OpenError::CreateDirectory(e.to_string()))?;
 
                 let file_path = dir.join(filename);
 
-                let mut file = File::create(&file_path).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+                let mut file =
+                    File::create(&file_path).map_err(|e| OpenError::OpenFile(e.to_string()))?;
 
-                tracing::debug!("file: {}", &file_path.as_path().display());
+                file.write_all(content)
+                    .map_err(|e| OpenError::WriteFile(e.to_string()))?;
 
-                file.write_all(content).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
-
-                let mut cmd: Command =
-                    self.cmd(&file_path
-                             .as_path().display().to_string())?.into();
+                let mut cmd: Command = self.cmd(&file_path.as_path().display().to_string())?.into();
 
                 cmd.spawn()
                     .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
@@ -116,9 +119,18 @@ pub trait Runner {
                 Ok(res)
             },
 
-            OpenTarget::Path { filename, content } => {
-                Ok(String::from("")) // TODO
-            }
+            OpenTarget::Path { filename, content: _ } => {
+                let dir = self.temp_dir();
+                let file_path = dir.join(&filename);
+
+                let dir = dir.as_path().display().to_string();
+                let file_path = file_path.as_path().display().to_string();
+                let cmd = self.cmd(&file_path)?;
+
+                let res = format!("Would save {} to {} and run: {}", &filename, &dir, cmd);
+
+                Ok(res)
+            },
         }
     }
 }
