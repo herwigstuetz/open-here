@@ -80,6 +80,8 @@ pub trait Runner {
 
                 let dir = std::env::temp_dir().join("open-here");
 
+                std::fs::create_dir_all(&dir).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+
                 let file_path = dir.join(filename);
 
                 let mut file = File::create(&file_path).map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
