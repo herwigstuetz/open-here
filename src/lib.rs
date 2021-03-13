@@ -11,23 +11,35 @@ use std::path::Path;
 use std::vec::Vec;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct UrlTarget {
+    pub target: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct PathTarget {
+    pub filename: String,
+    #[serde(skip)] // is handled via body
+    pub content: Vec<u8>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 /// Commands to be executed
 pub enum OpenTarget {
-    Url { target: String },
-    Path { filename: String, content: Vec<u8> },
+    Url(UrlTarget),
+    Path(PathTarget),
 }
 
 impl OpenTarget {
     pub fn new(s: &str) -> Option<OpenTarget> {
         if s.starts_with("http://") || s.starts_with("https://") {
-            Some(OpenTarget::Url {
+            Some(OpenTarget::Url(UrlTarget {
                 target: s.to_string(),
-            })
+            }))
         } else if Path::new(s).exists() {
-            Some(OpenTarget::Path {
+            Some(OpenTarget::Path(PathTarget {
                 filename: s.to_string(),
                 content: fs::read(s).ok()?,
-            })
+            }))
         } else {
             None
         }
@@ -37,8 +49,8 @@ impl OpenTarget {
 impl std::fmt::Display for OpenTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OpenTarget::Url { target } => write!(f, "{}", target.clone()),
-            OpenTarget::Path { filename, .. } => write!(f, "{}", filename.clone()),
+            OpenTarget::Url(UrlTarget { target }) => write!(f, "{}", target.clone()),
+            OpenTarget::Path(PathTarget { filename, content }) => write!(f, "{}, len: {}", filename.clone(), content.len()),
         }
     }
 }

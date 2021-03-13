@@ -1,13 +1,15 @@
 //! open-here client
 
 use crate::cmd;
-use crate::{OpenTarget, Response};
+use crate::{OpenTarget, UrlTarget, PathTarget, Response};
 
 use std::fmt;
 
 use envconfig::Envconfig;
 use reqwest::Client;
 use structopt::StructOpt;
+
+use bytes::Bytes;
 
 /// Configuration from the environment for the open-here client
 #[derive(Debug, StructOpt, Envconfig)]
@@ -68,12 +70,33 @@ impl OpenClient {
         }
     }
 
-    /// Send a request to open `target` on the open-here server
+    /// Send a request to open `open` on the open-here server
     #[tokio::main]
-    pub async fn open(&self, target: &OpenTarget) -> Result<String> {
-        let url = format!("{}/open", &self.server);
-        let req = self.client.get(&url).json(&target);
-        //            .query(&[("target", &target.to_string())]);
+    pub async fn open(&self, open: &OpenTarget) -> Result<String> {
+
+        let req = match open {
+            OpenTarget::Url(target) => {
+                let url = format!("{}/open/url", &self.server);
+                let req = self.client.get(&url).json(&target);
+
+                req
+            }
+            OpenTarget::Path(target) => {
+                let url = format!("{}/open/path", &self.server);
+
+                let bytes = Bytes::copy_from_slice(target.content.as_slice());
+                tracing::debug!("bytes: {}", bytes.len());
+                tracing::debug!("content: {}", target.content.len());
+
+                let req = self
+                    .client
+                    .get(&url)
+                    .query(&target)
+                    .body(bytes);
+
+                req
+            }
+        };
 
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;

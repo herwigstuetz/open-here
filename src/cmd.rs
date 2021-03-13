@@ -1,11 +1,12 @@
 //! Command to run.
-use crate::OpenTarget;
+use crate::{OpenTarget, PathTarget, UrlTarget};
 
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
+use std::path::PathBuf;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum OpenError {
@@ -72,7 +73,7 @@ pub trait Runner {
         let _guard = span.enter();
 
         match open {
-            OpenTarget::Url { target } => {
+            OpenTarget::Url(UrlTarget { target }) => {
                 let mut cmd: Command = self.cmd(&target)?.into();
 
                 cmd.spawn()
@@ -81,16 +82,24 @@ pub trait Runner {
                 Ok(String::from(""))
             }
 
-            OpenTarget::Path { filename, content } => {
+            OpenTarget::Path(PathTarget { filename, content }) => {
                 let dir = self.temp_dir();
 
-                std::fs::create_dir_all(&dir)
-                    .map_err(|e| OpenError::CreateDirectory(e.to_string()))?;
+                let file_path =
+                    if PathBuf::from(filename).is_absolute() {
+                        dir.join(PathBuf::from(format!("./{}", filename)))
+                    } else {
+                        dir.join(PathBuf::from(filename))
+                    };
 
-                let file_path = dir.join(filename);
+                tracing::trace!("Writing file {}", &file_path.display());
+                std::fs::create_dir_all(&file_path.parent().unwrap())
+                    .map_err(|e| OpenError::CreateDirectory(e.to_string()))?;
 
                 let mut file =
                     File::create(&file_path).map_err(|e| OpenError::OpenFile(e.to_string()))?;
+
+                tracing::trace!("Writing file {}", file_path.display());
 
                 file.write_all(content)
                     .map_err(|e| OpenError::WriteFile(e.to_string()))?;
@@ -110,16 +119,19 @@ pub trait Runner {
         let _guard = span.enter();
 
         match open {
-            OpenTarget::Url { target } => {
+            OpenTarget::Url(UrlTarget { target }) => {
                 let cmd = self.cmd(&target)?;
 
                 let res = format!("Would run: {}", cmd);
                 tracing::info!("{}", &res);
 
                 Ok(res)
-            },
+            }
 
-            OpenTarget::Path { filename, content: _ } => {
+            OpenTarget::Path(PathTarget {
+                filename,
+                content: _,
+            }) => {
                 let dir = self.temp_dir();
                 let file_path = dir.join(&filename);
 
@@ -128,9 +140,10 @@ pub trait Runner {
                 let cmd = self.cmd(&file_path)?;
 
                 let res = format!("Would save {} to {} and run: {}", &filename, &dir, cmd);
+                tracing::info!("{}", &res);
 
                 Ok(res)
-            },
+            }
         }
     }
 }

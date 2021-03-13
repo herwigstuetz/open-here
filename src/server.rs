@@ -1,7 +1,7 @@
 //! The server handling open requests.
 
 use crate::cmd;
-use crate::{OpenTarget, Response};
+use crate::{OpenTarget, UrlTarget, PathTarget, Response};
 
 use actix_web::{web, App, HttpResponse, HttpServer};
 use std::net::TcpListener;
@@ -19,18 +19,46 @@ pub struct Config {
     pub dry_run: bool,
 }
 
-/// Handle GET /open by opening the target with the system runner
-fn open(cfg: web::Data<Config>, form: web::Json<OpenTarget>) -> HttpResponse {
+/// Handle GET /open/url by opening the target URL with the system runner
+fn open_url(cfg: web::Data<Config>, form: web::Json<UrlTarget>) -> HttpResponse {
     let open = form.0;
 
     // TODO: More consistent logging/tracing/spanning
-    let span = tracing::debug_span!("open", open = %format!("{:?}", open));
+    let span = tracing::debug_span!("open/url", open = %format!("{:?}", open));
     let _guard = span.enter();
 
     let res: Response = if cfg.dry_run {
-        cmd::get_system_runner().dry_run(&open)
+        cmd::get_system_runner().dry_run(&OpenTarget::Url(open))
     } else {
-        cmd::get_system_runner().run(&open)
+        cmd::get_system_runner().run(&OpenTarget::Url(open))
+    };
+
+    if let Err(err) = &res {
+        tracing::warn!("{}", err);
+    }
+
+    HttpResponse::Ok().json(res)
+}
+
+/// Handle GET /open/url by opening the target URL with the system runner
+//fn open_path(cfg: web::Data<Config>, target: web::Form<PathTarget>, content: web::Bytes) -> HttpResponse {
+fn open_path(cfg: web::Data<Config>, target: web::Query<PathTarget>, content: web::Bytes) -> HttpResponse {
+//fn open_path(cfg: web::Data<Config>) -> HttpResponse {
+    let open = PathTarget {
+        filename: target.0.filename,
+        content: content.to_vec(),
+    };
+
+    tracing::debug!("vec: {}", open.content.len());
+
+    // TODO: More consistent logging/tracing/spanning
+    let span = tracing::debug_span!("open/path", open = %format!("{:?}", open));
+    let _guard = span.enter();
+
+    let res: Response = if cfg.dry_run {
+        cmd::get_system_runner().dry_run(&OpenTarget::Path(open))
+    } else {
+        cmd::get_system_runner().run(&OpenTarget::Path(open))
     };
 
     if let Err(err) = &res {
@@ -73,7 +101,8 @@ impl Server {
             {
                 HttpServer::new(move || {
                     App::new()
-                        .route("/open", web::get().to(open))
+                        .route("/open/url", web::get().to(open_url))
+                        .route("/open/path", web::get().to(open_path))
                         .data(config_.clone())
                 })
                 .listen(self.listener)?
