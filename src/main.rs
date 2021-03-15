@@ -48,10 +48,13 @@ pub fn run(args: cli::Args) -> Result<(), String> {
     }
 }
 
-fn main() -> Result<(), ()> {
+fn main() {
     let args = cli::Args::from_args();
 
     setup_logger(args.verbosity);
 
-    run(args).map_err(|_| ())
+    if let Err(err) = run(args) {
+        tracing::error!("{}", err);
+        std::process::exit(1);
+    }
 }

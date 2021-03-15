@@ -1,7 +1,7 @@
 //! open-here client
 
 use crate::cmd;
-use crate::{OpenTarget, UrlTarget, PathTarget, Response};
+use crate::{OpenTarget, Response};
 
 use std::fmt;
 
@@ -83,10 +83,7 @@ impl OpenClient {
             }
             OpenTarget::Path(target) => {
                 let url = format!("{}/open/path", &self.server);
-
                 let bytes = Bytes::copy_from_slice(target.content.as_slice());
-                tracing::debug!("bytes: {}", bytes.len());
-                tracing::debug!("content: {}", target.content.len());
 
                 let req = self
                     .client
@@ -101,12 +98,16 @@ impl OpenClient {
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;
 
-        let res: Response = resp.json().await?;
+        if resp.status().is_success() {
+            let res: Response = resp.json().await?;
 
-        if let Err(err) = &res {
-            tracing::trace!("{}", err);
+            if let Err(err) = &res {
+                tracing::trace!("{}", err);
+            }
+
+            res.map_err(|err| OpenError::ServerError { err })
+        } else {
+            Err(OpenError::HttpError { msg: resp.status().to_string() })
         }
-
-        res.map_err(|err| OpenError::ServerError { err })
     }
 }
