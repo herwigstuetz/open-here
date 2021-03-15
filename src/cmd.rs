@@ -1,7 +1,7 @@
 //! Command to run.
 use crate::{OpenTarget, PathTarget, UrlTarget};
 
-use std::error::Error;
+use std::error;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
@@ -9,27 +9,27 @@ use std::process::Command;
 use std::path::PathBuf;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub enum OpenError {
+pub enum Error {
     CouldNotRun(String),
     CreateDirectory(String),
     OpenFile(String),
     WriteFile(String),
 }
 
-impl fmt::Display for OpenError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OpenError::CouldNotRun(msg) => write!(f, "Could not run: {}", msg),
-            OpenError::CreateDirectory(msg) => write!(f, "Could not create directory: {}", msg),
-            OpenError::OpenFile(msg) => write!(f, "Could open file: {}", msg),
-            OpenError::WriteFile(msg) => write!(f, "Could write file: {}", msg),
+            Error::CouldNotRun(msg) => write!(f, "Could not run: {}", msg),
+            Error::CreateDirectory(msg) => write!(f, "Could not create directory: {}", msg),
+            Error::OpenFile(msg) => write!(f, "Could open file: {}", msg),
+            Error::WriteFile(msg) => write!(f, "Could write file: {}", msg),
         }
     }
 }
 
-impl Error for OpenError {}
+impl error::Error for Error {}
 
-type Result<T> = std::result::Result<T, OpenError>;
+type Result<T> = std::result::Result<T, Error>;
 
 pub struct OpenCommand {
     program: String,
@@ -77,7 +77,7 @@ pub trait Runner {
                 let mut cmd: Command = self.cmd(&target)?.into();
 
                 cmd.spawn()
-                    .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+                    .map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
                 Ok(String::from(""))
             }
@@ -94,20 +94,20 @@ pub trait Runner {
 
                 tracing::trace!("Writing file {}", &file_path.display());
                 std::fs::create_dir_all(&file_path.parent().unwrap())
-                    .map_err(|e| OpenError::CreateDirectory(e.to_string()))?;
+                    .map_err(|e| Error::CreateDirectory(e.to_string()))?;
 
                 let mut file =
-                    File::create(&file_path).map_err(|e| OpenError::OpenFile(e.to_string()))?;
+                    File::create(&file_path).map_err(|e| Error::OpenFile(e.to_string()))?;
 
                 tracing::trace!("Writing file {}", file_path.display());
 
                 file.write_all(content)
-                    .map_err(|e| OpenError::WriteFile(e.to_string()))?;
+                    .map_err(|e| Error::WriteFile(e.to_string()))?;
 
                 let mut cmd: Command = self.cmd(&file_path.as_path().display().to_string())?.into();
 
                 cmd.spawn()
-                    .map_err(|e| OpenError::CouldNotRun(e.to_string()))?;
+                    .map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
                 Ok(String::from(""))
             }

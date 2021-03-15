@@ -55,7 +55,7 @@ impl std::fmt::Display for OpenTarget {
     }
 }
 
-pub type Response = Result<String, cmd::OpenError>;
+pub type Response = Result<String, cmd::Error>;
 
 fn clamp(x: usize, min: usize, max: usize) -> usize {
     if x < min {

@@ -28,7 +28,7 @@ pub enum OpenError {
         msg: String,
     },
     ServerError {
-        err: cmd::OpenError,
+        err: cmd::Error,
     },
 }
 
