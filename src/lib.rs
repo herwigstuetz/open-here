@@ -8,7 +8,7 @@ pub use structopt::StructOpt;
 
 use std::fs;
 use std::path::Path;
-use std::vec::Vec;
+use std::{error, vec::Vec};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct UrlTarget {
@@ -29,19 +29,43 @@ pub enum OpenTarget {
     Path(PathTarget),
 }
 
+
+#[derive(Debug)]
+pub enum Error {
+    UnknownTarget(String),
+    File(Box<dyn std::error::Error>),
+}
+
+impl error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::UnknownTarget(target) => {
+                write!(f, "Unknown target to open: {}", target)
+            }
+            Error::File(e) => {
+                write!(f, "File error: {}", e)
+            }
+        }
+    }
+}
+
+type Result<T> = std::result::Result<T, Error>;
+
 impl OpenTarget {
-    pub fn new(s: &str) -> Option<OpenTarget> {
+    pub fn new(s: &str) -> Result<OpenTarget> {
         if s.starts_with("http://") || s.starts_with("https://") {
-            Some(OpenTarget::Url(UrlTarget {
+            Ok(OpenTarget::Url(UrlTarget {
                 target: s.to_string(),
             }))
         } else if Path::new(s).exists() {
-            Some(OpenTarget::Path(PathTarget {
+            Ok(OpenTarget::Path(PathTarget {
                 filename: s.to_string(),
-                content: fs::read(s).ok()?,
+                content: fs::read(s).map_err(|e| Error::File(Box::new(e)))?,
             }))
         } else {
-            None
+            Err(Error::UnknownTarget(s.to_string()))
         }
     }
 }
@@ -55,7 +79,7 @@ impl std::fmt::Display for OpenTarget {
     }
 }
 
-pub type Response = Result<String, cmd::Error>;
+pub type Response = std::result::Result<String, cmd::Error>;
 
 fn clamp(x: usize, min: usize, max: usize) -> usize {
     if x < min {

@@ -39,7 +39,7 @@ pub fn run(args: cli::Args) -> Result<(), String> {
             tracing::debug!("{:?}", target);
 
             let config = client::Config::init_from_env().unwrap();
-            let target = OpenTarget::new(&target).ok_or_else(|| "Could not create OpenTarget".to_string())?;
+            let target = OpenTarget::new(&target).map_err(|e| e.to_string())?;
 
             tracing::debug!("run: new: {:}", target);
 
