@@ -17,6 +17,10 @@ pub struct Config {
     /// If true will print the command instead of executing it
     #[structopt(short, long)]
     pub dry_run: bool,
+
+    /// Max filesize for "/open/path" (default: 25MiB)
+    #[structopt(short, long, default_value = "26214400")]
+    pub max_filesize: usize,
 }
 
 /// Handle GET /open/url by opening the target URL with the system runner
@@ -96,14 +100,15 @@ impl Server {
             self.get_port().unwrap()
         );
 
-        let config_ = self.config.clone();
+        let config = self.config.clone();
         actix_web::rt::System::new("main").block_on(async move {
             {
                 HttpServer::new(move || {
                     App::new()
                         .route("/open/url", web::get().to(open_url))
                         .route("/open/path", web::get().to(open_path))
-                        .data(config_.clone())
+                        .data(config.clone())
+                        .data(web::PayloadConfig::new(config.max_filesize))
                 })
                 .listen(self.listener)?
                 .run()

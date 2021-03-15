@@ -26,6 +26,7 @@ fn test_open_url() {
     let server = server::Server::new(server::Config {
         host: "localhost:0".to_string(),
         dry_run: true, // we do not actually want to open something
+        max_filesize: 26214400,
     })
     .unwrap();
 
@@ -51,6 +52,7 @@ fn test_open_file() {
     let server = server::Server::new(server::Config {
         host: "localhost:0".to_string(),
         dry_run: true, // we do not actually want to open something
+        max_filesize: 26214400,
     })
     .unwrap();
 
