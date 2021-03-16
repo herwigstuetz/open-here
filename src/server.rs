@@ -23,51 +23,40 @@ pub struct Config {
     pub max_filesize: usize,
 }
 
-/// Handle GET /open/url by opening the target URL with the system runner
-fn open_url(cfg: web::Data<Config>, form: web::Json<UrlTarget>) -> HttpResponse {
-    let open = form.0;
-
-    // TODO: More consistent logging/tracing/spanning
-    let span = tracing::debug_span!("open/url", open = %format!("{:?}", open));
+fn open(target: OpenTarget, dry_run: bool) -> Response {
+    let span = tracing::debug_span!("open", open = %format!("{:?}", target));
     let _guard = span.enter();
 
-    let res: Response = if cfg.dry_run {
-        cmd::get_system_runner().dry_run(&OpenTarget::Url(open))
+    let res: Response = if dry_run {
+        cmd::get_system_runner().dry_run(&target)
     } else {
-        cmd::get_system_runner().run(&OpenTarget::Url(open))
+        cmd::get_system_runner().run(&target)
     };
 
     if let Err(err) = &res {
         tracing::warn!("{}", err);
     }
+
+    res
+}
+
+/// Handle GET /open/url by opening the target URL with the system runner
+fn open_url(cfg: web::Data<Config>, json: web::Json<UrlTarget>) -> HttpResponse {
+    let target = json.0;
+
+    let res = open(OpenTarget::Url(target), cfg.dry_run);
 
     HttpResponse::Ok().json(res)
 }
 
 /// Handle GET /open/url by opening the target URL with the system runner
-//fn open_path(cfg: web::Data<Config>, target: web::Form<PathTarget>, content: web::Bytes) -> HttpResponse {
-fn open_path(cfg: web::Data<Config>, target: web::Query<PathTarget>, content: web::Bytes) -> HttpResponse {
-//fn open_path(cfg: web::Data<Config>) -> HttpResponse {
-    let open = PathTarget {
-        filename: target.0.filename,
+fn open_path(cfg: web::Data<Config>, query: web::Query<PathTarget>, content: web::Bytes) -> HttpResponse {
+    let target = PathTarget {
+        filename: query.0.filename,
         content: content.to_vec(),
     };
 
-    tracing::debug!("vec: {}", open.content.len());
-
-    // TODO: More consistent logging/tracing/spanning
-    let span = tracing::debug_span!("open/path", open = %format!("{:?}", open));
-    let _guard = span.enter();
-
-    let res: Response = if cfg.dry_run {
-        cmd::get_system_runner().dry_run(&OpenTarget::Path(open))
-    } else {
-        cmd::get_system_runner().run(&OpenTarget::Path(open))
-    };
-
-    if let Err(err) = &res {
-        tracing::warn!("{}", err);
-    }
+    let res = open(OpenTarget::Path(target), cfg.dry_run);
 
     HttpResponse::Ok().json(res)
 }
