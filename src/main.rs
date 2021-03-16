@@ -1,25 +1,51 @@
 use open_here::cli;
 use open_here::client;
 use open_here::server;
+use open_here::setup_logger;
+use open_here::OpenTarget;
 
-use env_logger::Env;
+use envconfig::Envconfig;
 use structopt::StructOpt;
 
-fn clamp(x: usize, min: usize, max: usize) -> usize {
-    if x < min {
-        min
-    } else if x > max {
-        max
+pub fn serve(config: server::Config) -> Result<(), String> {
+    let server = server::Server::new(config)?;
+
+    let res = server.run();
+
+    if let Err(e) = res {
+        tracing::error!("{}", e);
+        Err(e.to_string())
     } else {
-        x
+        Ok(())
     }
 }
 
-fn setup_logger(log_level: u8) {
-    let log_levels = vec!["error", "warn", "info", "debug", "trace"];
-    let level = clamp(log_level as usize, 0, log_levels.len() - 1);
+pub fn open(config: client::Config, target: OpenTarget) -> Result<String, String> {
+    let client = client::OpenClient::new(format!("http://{}", config.host));
 
-    env_logger::Builder::from_env(Env::default().default_filter_or(log_levels[level])).init();
+    client.open(&target).map_err(|e| e.to_string())
+}
+
+pub fn run(args: cli::Args) -> Result<(), String> {
+    tracing::debug!("{:?}", args);
+
+    match args.command {
+        cli::Command::Server(config) => {
+            tracing::debug!("serving");
+
+            serve(config)
+        }
+        cli::Command::Open { target } => {
+            tracing::debug!("{:?}", target);
+
+            let config = client::Config::init_from_env().unwrap();
+            let target = OpenTarget::new(&target).map_err(|e| e.to_string())?;
+
+            tracing::debug!("run: new: {:}", target);
+
+            open(config, target).map(|_| ())
+        }
+    }
 }
 
 fn main() {
@@ -27,24 +53,8 @@ fn main() {
 
     setup_logger(args.verbosity);
 
-    tracing::debug!("{:?}", args);
-
-    match args.command {
-        cli::Command::Server => {
-            tracing::debug!("serving");
-            let res = server::serve();
-
-            if let Err(e) = res {
-                tracing::error!("{}", e);
-            }
-        }
-        cli::Command::Open(target) => {
-            tracing::debug!("{:?}", target);
-            let res = client::open(target);
-
-            if let Err(e) = res {
-                tracing::error!("{}", e);
-            }
-        }
+    if let Err(err) = run(args) {
+        tracing::error!("{}", err);
+        std::process::exit(1);
     }
 }

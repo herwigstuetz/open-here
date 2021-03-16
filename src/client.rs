@@ -1,16 +1,22 @@
 //! open-here client
 
-use crate::cli;
+use crate::cmd;
+use crate::{OpenTarget, Response};
+
+use std::fmt;
 
 use envconfig::Envconfig;
 use reqwest::Client;
-use std::fmt;
+use structopt::StructOpt;
+
+use bytes::Bytes;
 
 /// Configuration from the environment for the open-here client
-#[derive(Envconfig)]
-struct Config {
+#[derive(Debug, StructOpt, Envconfig)]
+pub struct Config {
     /// Host and optional port on which open-here server is listening on
     #[envconfig(from = "OPEN_HOST", default = "127.0.0.1:9123")]
+    #[structopt(default_value = "127.0.0.1:9123")]
     pub host: String,
 }
 
@@ -18,13 +24,19 @@ struct Config {
 #[derive(Debug)]
 pub enum OpenError {
     /// A HTTP error during sending the HTTP request
-    HttpError { msg: String },
+    HttpError {
+        msg: String,
+    },
+    ServerError {
+        err: cmd::Error,
+    },
 }
 
 impl fmt::Display for OpenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OpenError::HttpError { msg } => write!(f, "Open failed with {}", msg),
+            OpenError::HttpError { msg } => write!(f, "Open failed with HTTP error: {}", msg),
+            OpenError::ServerError { err } => write!(f, "Open failed with server error: {}", err),
         }
     }
 }
@@ -40,7 +52,7 @@ impl From<reqwest::Error> for OpenError {
 type Result<T> = std::result::Result<T, OpenError>;
 
 /// Client that connects to open-here server and sends "open" requests
-struct OpenClient {
+pub struct OpenClient {
     /// HTTP client
     client: Client,
 
@@ -51,49 +63,51 @@ struct OpenClient {
 impl OpenClient {
     /// Instantiate a new `OpenClient`. It keeps an internal HTTP Client
     /// for connection pooling
-    fn new(server: String) -> Self {
+    pub fn new(server: String) -> Self {
         Self {
             client: Client::new(),
             server,
         }
     }
 
-    /// Send a request to open `target` on the open-here server
-    async fn open(&self, target: cli::OpenTarget) -> Result<()> {
-        let url = format!("{}/open", &self.server);
-        let req = self
-            .client
-            .get(&url)
-            .query(&[("target", &target.target.to_string())]);
+    /// Send a request to open `open` on the open-here server
+    #[tokio::main]
+    pub async fn open(&self, open: &OpenTarget) -> Result<String> {
+
+        let req = match open {
+            OpenTarget::Url(target) => {
+                let url = format!("{}/open/url", &self.server);
+                let req = self.client.get(&url).json(&target);
+
+                req
+            }
+            OpenTarget::Path(target) => {
+                let url = format!("{}/open/path", &self.server);
+                let bytes = Bytes::copy_from_slice(target.content.as_slice());
+
+                let req = self
+                    .client
+                    .get(&url)
+                    .query(&target)
+                    .body(bytes);
+
+                req
+            }
+        };
 
         tracing::debug!("Sent request: {:?}", &req);
         let resp = req.send().await?;
 
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or("".to_string());
+        if resp.status().is_success() {
+            let res: Response = resp.json().await?;
 
-        if !status.is_success() {
-            tracing::error!("{}", text);
-            return Err(OpenError::HttpError { msg: text });
+            if let Err(err) = &res {
+                tracing::trace!("{}", err);
+            }
+
+            res.map_err(|err| OpenError::ServerError { err })
+        } else {
+            Err(OpenError::HttpError { msg: resp.status().to_string() })
         }
-
-        Ok(())
     }
-}
-
-#[tokio::main]
-pub async fn open(open: cli::OpenTarget) -> Result<()> {
-    let cfg = Config::init_from_env().unwrap();
-    let server = format!("http://{}", cfg.host);
-
-    let client = OpenClient::new(server);
-    /*
-        match client.open(open).await {
-            Ok(_) => {}
-            Err(_) => {}
-        }
-    */
-    client.open(open).await?;
-
-    Ok(())
 }
