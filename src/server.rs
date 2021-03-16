@@ -27,10 +27,12 @@ fn open(target: OpenTarget, dry_run: bool) -> Response {
     let span = tracing::debug_span!("open", open = %format!("{:?}", target));
     let _guard = span.enter();
 
+    let runner = cmd::Runner::from_system_runner();
+
     let res: Response = if dry_run {
-        cmd::get_system_runner().dry_run(&target)
+        runner.dry_run(&target)
     } else {
-        cmd::get_system_runner().run(&target)
+        runner.run(&target)
     };
 
     if let Err(err) = &res {

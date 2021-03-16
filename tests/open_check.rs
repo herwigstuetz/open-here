@@ -40,7 +40,8 @@ fn test_open_url() {
         }))
         .unwrap();
 
-    assert!(res.contains("Would run:") && res.contains(&target));
+    tracing::debug!("open-here server returned: {}", &res);
+    assert!(res.contains(&target));
 }
 
 #[test]
@@ -67,5 +68,6 @@ fn test_open_file() {
         }))
         .unwrap();
 
-    assert!(res.contains("Would save") && res.contains(&target));
+    tracing::debug!("open-here server returned: {}", &res);
+    assert!(res.contains(&target));
 }

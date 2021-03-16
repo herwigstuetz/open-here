@@ -31,6 +31,53 @@ impl error::Error for Error {}
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub enum Opener {
+    XdgOpen,
+    Open,
+    Start,
+}
+
+impl Opener {
+    #[cfg(target_os = "linux")]
+    fn get_system_opener() -> Opener {
+        Opener::XdgOpen
+    }
+    #[cfg(target_os = "macos")]
+    fn get_system_opener() -> Opener {
+        Opener::Open
+    }
+    #[cfg(target_os = "windows")]
+    fn get_system_opener() -> Opener {
+        Opener::Start
+    }
+
+    fn cmd(&self, target: &str) -> OpenCommand {
+        match self {
+            Opener::XdgOpen => {
+                OpenCommand {
+                    program: String::from("xdg-open"),
+                    args: vec![target.to_string()],
+                }
+            }
+            Opener::Open => {
+                OpenCommand {
+                    program: String::from("open"),
+                    args: vec![target.to_string()],
+                }
+            }
+            Opener::Start => {
+                OpenCommand {
+                    program: String::from("cmd"),
+                    args: vec!["/c", "start", &target.to_string()]
+                        .iter()
+                        .map(|arg| arg.to_string())
+                        .collect(),
+                }
+            }
+        }
+    }
+}
+
 pub struct OpenCommand {
     program: String,
     /// TODO: use Vec<&str>
@@ -61,25 +108,27 @@ impl Into<Command> for OpenCommand {
     }
 }
 
-pub trait Runner {
-    fn cmd(&self, open: &str) -> Result<OpenCommand>;
+pub struct Runner {
+    opener: Opener,
+}
+
+impl Runner {
+    pub fn from_system_runner() -> Runner {
+        Self::new(Opener::get_system_opener())
+    }
+
+    pub fn new(opener: Opener) -> Runner {
+        Runner { opener }
+    }
 
     fn temp_dir(&self) -> std::path::PathBuf {
         std::env::temp_dir().join("open-here")
     }
 
-    fn run(&self, open: &OpenTarget) -> Result<String> {
-        let span = tracing::debug_span!("run", open = %format!("{:?}", open));
-        let _guard = span.enter();
-
-        match open {
+    fn cmd(&self, target: &OpenTarget) -> Result<OpenCommand> {
+        match target {
             OpenTarget::Url(UrlTarget { target }) => {
-                let mut cmd: Command = self.cmd(&target)?.into();
-
-                cmd.spawn()
-                    .map_err(|e| Error::CouldNotRun(e.to_string()))?;
-
-                Ok(String::from(""))
+                Ok(self.opener.cmd(target))
             }
 
             OpenTarget::Path(PathTarget { filename, content }) => {
@@ -104,94 +153,30 @@ pub trait Runner {
                 file.write_all(content)
                     .map_err(|e| Error::WriteFile(e.to_string()))?;
 
-                let mut cmd: Command = self.cmd(&file_path.as_path().display().to_string())?.into();
-
-                cmd.spawn()
-                    .map_err(|e| Error::CouldNotRun(e.to_string()))?;
-
-                Ok(String::from(""))
+                Ok(self.opener.cmd(&file_path.as_path().display().to_string()))
             }
         }
+
     }
 
-    fn dry_run(&self, open: &OpenTarget) -> Result<String> {
-        let span = tracing::debug_span!("run", open = %format!("{:?}", open));
-        let _guard = span.enter();
+    pub fn run(&self, target: &OpenTarget) -> Result<String> {
+        let cmd = self.cmd(target)?;
 
-        match open {
-            OpenTarget::Url(UrlTarget { target }) => {
-                let cmd = self.cmd(&target)?;
+        tracing::debug!("run: {}", &cmd);
 
-                let res = format!("Would run: {}", cmd);
-                tracing::info!("{}", &res);
+        let mut cmd: Command = cmd.into();
 
-                Ok(res)
-            }
+        cmd.spawn()
+            .map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
-            OpenTarget::Path(PathTarget {
-                filename,
-                content: _,
-            }) => {
-                let dir = self.temp_dir();
-                let file_path = dir.join(&filename);
-
-                let dir = dir.as_path().display().to_string();
-                let file_path = file_path.as_path().display().to_string();
-                let cmd = self.cmd(&file_path)?;
-
-                let res = format!("Would save {} to {} and run: {}", &filename, &dir, cmd);
-                tracing::info!("{}", &res);
-
-                Ok(res)
-            }
-        }
+        Ok(String::from(""))
     }
-}
 
-pub struct LinuxOpen {}
-impl Runner for LinuxOpen {
-    fn cmd(&self, open: &str) -> Result<OpenCommand> {
-        Ok(OpenCommand {
-            program: String::from("xdg-open"),
-            args: vec![open.to_string()],
-        })
+    pub fn dry_run(&self, target: &OpenTarget) -> Result<String> {
+        let cmd = self.cmd(target)?;
+
+        tracing::debug!("dry_run: {}", &cmd);
+
+        Ok(cmd.to_string())
     }
-}
-
-pub struct MacOSOpen {}
-impl Runner for MacOSOpen {
-    fn cmd(&self, open: &str) -> Result<OpenCommand> {
-        Ok(OpenCommand {
-            program: String::from("open"),
-            args: vec![open.to_string()],
-        })
-    }
-}
-
-pub struct WindowsOpen {}
-impl Runner for WindowsOpen {
-    fn cmd(&self, open: &str) -> Result<OpenCommand> {
-        Ok(OpenCommand {
-            program: String::from("cmd"),
-            args: vec!["/c", "start", &open.to_string()]
-                .iter()
-                .map(|arg| arg.to_string())
-                .collect(),
-        })
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub fn get_system_runner() -> Box<dyn Runner> {
-    Box::new(LinuxOpen {})
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_system_runner() -> Box<dyn Runner> {
-    Box::new(MacOSOpen {})
-}
-
-#[cfg(target_os = "windows")]
-pub fn get_system_runner() -> Box<dyn Runner> {
-    Box::new(WindowsOpen {})
 }
