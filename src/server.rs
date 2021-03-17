@@ -1,7 +1,7 @@
 //! The server handling open requests.
 
 use crate::cmd;
-use crate::{OpenTarget, UrlTarget, PathTarget, Response};
+use crate::{OpenTarget, PathTarget, Response, UrlTarget};
 
 use actix_web::{web, App, HttpResponse, HttpServer};
 use std::net::TcpListener;
@@ -52,7 +52,11 @@ fn open_url(cfg: web::Data<Config>, json: web::Json<UrlTarget>) -> HttpResponse 
 }
 
 /// Handle GET /open/url by opening the target URL with the system runner
-fn open_path(cfg: web::Data<Config>, query: web::Query<PathTarget>, content: web::Bytes) -> HttpResponse {
+fn open_path(
+    cfg: web::Data<Config>,
+    query: web::Query<PathTarget>,
+    content: web::Bytes,
+) -> HttpResponse {
     let target = PathTarget {
         filename: query.0.filename,
         content: content.to_vec(),

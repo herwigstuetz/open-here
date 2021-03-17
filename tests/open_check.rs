@@ -3,7 +3,7 @@
 use open_here::client;
 use open_here::server;
 use open_here::setup_logger;
-use open_here::{OpenTarget, UrlTarget, PathTarget};
+use open_here::{OpenTarget, PathTarget, UrlTarget};
 
 use std::sync::Once;
 use std::thread;

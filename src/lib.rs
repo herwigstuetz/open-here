@@ -29,7 +29,6 @@ pub enum OpenTarget {
     Path(PathTarget),
 }
 
-
 #[derive(Debug)]
 pub enum Error {
     UnknownTarget(String),
@@ -74,7 +73,9 @@ impl std::fmt::Display for OpenTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OpenTarget::Url(UrlTarget { target }) => write!(f, "{}", target.clone()),
-            OpenTarget::Path(PathTarget { filename, content }) => write!(f, "{}, len: {}", filename.clone(), content.len()),
+            OpenTarget::Path(PathTarget { filename, content }) => {
+                write!(f, "{}, len: {}", filename.clone(), content.len())
+            }
         }
     }
 }

@@ -5,8 +5,8 @@ use std::error;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum Error {
@@ -53,27 +53,21 @@ impl Opener {
 
     fn cmd(&self, target: &str) -> OpenCommand {
         match self {
-            Opener::XdgOpen => {
-                OpenCommand {
-                    program: String::from("xdg-open"),
-                    args: vec![target.to_string()],
-                }
-            }
-            Opener::Open => {
-                OpenCommand {
-                    program: String::from("open"),
-                    args: vec![target.to_string()],
-                }
-            }
-            Opener::Start => {
-                OpenCommand {
-                    program: String::from("cmd"),
-                    args: vec!["/c", "start", &target.to_string()]
-                        .iter()
-                        .map(|arg| arg.to_string())
-                        .collect(),
-                }
-            }
+            Opener::XdgOpen => OpenCommand {
+                program: String::from("xdg-open"),
+                args: vec![target.to_string()],
+            },
+            Opener::Open => OpenCommand {
+                program: String::from("open"),
+                args: vec![target.to_string()],
+            },
+            Opener::Start => OpenCommand {
+                program: String::from("cmd"),
+                args: vec!["/c", "start", &target.to_string()]
+                    .iter()
+                    .map(|arg| arg.to_string())
+                    .collect(),
+            },
         }
     }
 }
@@ -127,19 +121,16 @@ impl Runner {
 
     fn cmd(&self, target: &OpenTarget) -> Result<OpenCommand> {
         match target {
-            OpenTarget::Url(UrlTarget { target }) => {
-                Ok(self.opener.cmd(target))
-            }
+            OpenTarget::Url(UrlTarget { target }) => Ok(self.opener.cmd(target)),
 
             OpenTarget::Path(PathTarget { filename, content }) => {
                 let dir = self.temp_dir();
 
-                let file_path =
-                    if PathBuf::from(filename).is_absolute() {
-                        dir.join(PathBuf::from(format!("./{}", filename)))
-                    } else {
-                        dir.join(PathBuf::from(filename))
-                    };
+                let file_path = if PathBuf::from(filename).is_absolute() {
+                    dir.join(PathBuf::from(format!("./{}", filename)))
+                } else {
+                    dir.join(PathBuf::from(filename))
+                };
 
                 tracing::trace!("Writing file {}", &file_path.display());
                 std::fs::create_dir_all(&file_path.parent().unwrap())
@@ -156,7 +147,6 @@ impl Runner {
                 Ok(self.opener.cmd(&file_path.as_path().display().to_string()))
             }
         }
-
     }
 
     pub fn run(&self, target: &OpenTarget) -> Result<String> {
@@ -166,8 +156,7 @@ impl Runner {
 
         let mut cmd: Command = cmd.into();
 
-        cmd.spawn()
-            .map_err(|e| Error::CouldNotRun(e.to_string()))?;
+        cmd.spawn().map_err(|e| Error::CouldNotRun(e.to_string()))?;
 
         Ok(String::from(""))
     }
