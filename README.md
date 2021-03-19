@@ -53,3 +53,7 @@ It is recommended to start `open-here server` on a loopback interface and forwar
 
 - Changes to files opened with `open-here` are not automatically synchronized. If an opened file changes on the client-side, it needs to be re-opened in order for the server to see those changes. Vice versa, changes to an opened file on the server side are not written back to the file on the client-side. There is currently no possibility to do this.
 - There is no authentication for connection to an `open-here` server.
+
+# License
+
+The `open-here` project is licensed under [MIT](./LICENSE).
