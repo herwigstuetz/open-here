@@ -1,0 +1,29 @@
+image: "rust:latest"
+
+before_script:
+  - rustup component add clippy
+  - rustup component add rustfmt
+
+stages:
+  - lint
+  - test
+
+fmt:
+  stage:
+    lint
+  script:
+    - rustfmt --version && cargo --version  # Print version info for debugging
+    - cargo fmt -- --check
+
+clippy:
+  stage:
+    lint
+  script:
+    - cargo clippy --version && cargo --version  # Print version info for debugging
+    - cargo clippy --all-targets -- -D warnings
+
+
+test:cargo:
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo test --workspace --verbose

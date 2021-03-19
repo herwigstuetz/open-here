@@ -73,25 +73,17 @@ impl OpenClient {
     /// Send a request to open `open` on the open-here server
     #[tokio::main]
     pub async fn open(&self, open: &OpenTarget) -> Result<String> {
-
         let req = match open {
             OpenTarget::Url(target) => {
                 let url = format!("{}/open/url", &self.server);
-                let req = self.client.get(&url).json(&target);
 
-                req
+                self.client.get(&url).json(&target)
             }
             OpenTarget::Path(target) => {
                 let url = format!("{}/open/path", &self.server);
                 let bytes = Bytes::copy_from_slice(target.content.as_slice());
 
-                let req = self
-                    .client
-                    .get(&url)
-                    .query(&target)
-                    .body(bytes);
-
-                req
+                self.client.get(&url).query(&target).body(bytes)
             }
         };
 
@@ -107,7 +99,9 @@ impl OpenClient {
 
             res.map_err(|err| OpenError::ServerError { err })
         } else {
-            Err(OpenError::HttpError { msg: resp.status().to_string() })
+            Err(OpenError::HttpError {
+                msg: resp.status().to_string(),
+            })
         }
     }
 }
